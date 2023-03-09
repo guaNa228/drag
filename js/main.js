@@ -176,6 +176,7 @@ let level23Validation =  function() {
 }   
 
 let level1Validation = function () {
+    let correctAnswer = parseInt(this.dataset.id);
     let taskBlock = taskContainer.querySelector(`img[data-id="${correctAnswer}"]`);
 
     if (objectIntersectionArea(taskBlock, this)) {
