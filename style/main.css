@@ -217,12 +217,14 @@ button.rating:hover {
     background: #14ff53;
 }
 
-@keyframes fade {
-    from {
+@keyframes fadeAnim {
+    0% {
         opacity: 0;
     }
-
-    to {
+    50% {
         opacity: 1;
+    }
+    100% {
+        opacity: 0;
     }
 }

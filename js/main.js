@@ -1,4 +1,4 @@
-import { answers, levelQuestions, questionSize } from "./answers.js";
+import { answers, levelQuestions, maxAnimTime, questionSize } from "./answers.js";
 
 let NICKNAME = JSON.parse(localStorage.getItem('nickname')) || 'Player';
 let RECORDS = JSON.parse(localStorage.getItem('records')) || [[], [], []];
@@ -125,12 +125,19 @@ function createPictureItem(level, question, id, isBlank) {
     if (!isBlank) {
         currentElement.src = `data/level${level + 1}/question${question + 1}/${adding}${id + 1}.${fileType}`;
         currentElement.dataset.id = id;
+        if (level==2) {
+            currentElement.style.animation = `fadeAnim ${getRandomAnimationTime()}s ease infinite`;
+        }
     }
     currentElement.dataset.question = question;
     currentElement.dataset.level = level;
     
 
     return currentElement;
+}
+
+function getRandomAnimationTime() {
+    return 0.5 + maxAnimTime*Math.random();
 }
 
 function setDragListeners() {
