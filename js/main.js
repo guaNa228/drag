@@ -11,11 +11,48 @@ let endGameScreen = document.querySelector('.endLevelScreen');
 let timeReport = document.querySelector('span.time');
 let gameScreen = document.querySelector('.gameContainer');
 let backToMenuButton = document.querySelector('.backToMenu');
+let ratingScreen = document.querySelector('.ratingScreen')
+
+let backButtons = document.querySelectorAll('.backButton');
+backButtons.forEach((btn) => {
+    btn.addEventListener('click', closeCurrentTab);
+});
+
+function closeCurrentTab() {
+    this.parentElement.classList.remove('active');
+}
 
 backToMenuButton.addEventListener('click', () => {
     endGameScreen.classList.remove('active');
     gameScreen.classList.remove('active');
 });
+
+let ratingButton = document.querySelector('.ratingButton');
+ratingButton.addEventListener('click', () => {
+    showRating(0);
+    ratingScreen.classList.add('active');
+});
+
+let showRatingButtons = document.querySelectorAll('.ratingBlock nav span');
+
+showRatingButtons.forEach((item) => {
+    item.addEventListener('click', function() {
+        showRating(parseInt(this.textContent[this.textContent.length - 1]) - 1);
+    });
+});
+
+let ratingList = document.querySelector('.rating');
+
+function showRating(level) {
+    showRatingButtons.forEach((item) => item.classList.remove('selected'));
+    showRatingButtons[level].classList.add('selected');
+    let bestPlayersHTML = '';
+    RECORDS[level].forEach((record, index) => {
+        bestPlayersHTML += `<p>${index + 1}. ${record.nick} - ${record.score}</p>`
+    });
+
+    ratingList.innerHTML = bestPlayersHTML ? bestPlayersHTML : '<p>Список лучших игроков пока пуст :(</p>';
+}
 
 let nicknameInput = document.querySelector('.nickname input');
 nicknameInput.addEventListener('input', function () {
@@ -58,6 +95,7 @@ function startLevel() {
 }
 
 function startTimer() {
+    clearInterval(CURRENT_LEVEL_TIMER);
     CURRENT_LEVEL_TIME = 0;
     CURRENT_LEVEL_TIMER = setInterval(() => {
         CURRENT_LEVEL_TIME += 1;
@@ -95,6 +133,7 @@ function createQuestion(level, question) {
 }
 
 function drawPictureItems(container, level, length, question) {
+    container.style.background = 'none';
     console.log(1);
     let blank = false;
     if (!(level == 0 || container == answersContainer)) {
@@ -113,8 +152,8 @@ function drawPictureItems(container, level, length, question) {
 }
 
 function createPictureItem(level, question, id, isBlank) {
-    let fileType = level==0 ? 'png' : 'jpg';
-    let adding = level==0 ? '' : 'a';
+    let fileType = level == 0 ? 'png' : 'jpg';
+    let adding = level == 0 ? '' : 'a';
     let currentElement = document.createElement('img');
     currentElement.classList.add('option');
     if (isBlank) {
@@ -125,19 +164,31 @@ function createPictureItem(level, question, id, isBlank) {
     if (!isBlank) {
         currentElement.src = `data/level${level + 1}/question${question + 1}/${adding}${id + 1}.${fileType}`;
         currentElement.dataset.id = id;
-        if (level==2) {
-            currentElement.style.animation = `fadeAnim ${getRandomAnimationTime()}s ease infinite`;
+        if (level == 2) {
+            let timeToChange = getRandomAnimationTime();
+            currentElement.style.animation = `fadeAnim ${timeToChange}s ease infinite`;
+            setTimeout(randomChange, timeToChange*1000, currentElement, timeToChange)
         }
     }
     currentElement.dataset.question = question;
     currentElement.dataset.level = level;
-    
+
 
     return currentElement;
 }
 
+function randomChange(currentElement, timeToChange) {
+    console.log(timeToChange);
+    if (currentElement.style.position!='absolute') {
+        let randomIndex = Math.floor(Math.random()*questionSize[2].answers);
+        currentElement.src = currentElement.src.substring(0, currentElement.src.lastIndexOf('/')) + `/a${randomIndex+1}.jpg`;
+        currentElement.dataset.id = randomIndex;
+        setTimeout(randomChange, timeToChange*1000, currentElement, timeToChange);
+    }
+}
+
 function getRandomAnimationTime() {
-    return 0.5 + maxAnimTime*Math.random();
+    return 1 + maxAnimTime * Math.random();
 }
 
 function setDragListeners() {
@@ -158,14 +209,14 @@ function setDragListeners() {
 
             document.onmousemove = (e) => { moveAt(this, e); }
 
-            this.onmouseup = this.dataset.level=='0' ? level1Validation : level23Validation;
+            this.onmouseup = this.dataset.level == '0' ? level1Validation : level23Validation;
         }
     });
 }
 
-let level23Validation =  function() {
+let level23Validation = function () {
     let taskBlock = taskContainer.lastElementChild;
-    if (objectIntersectionArea(taskBlock, this) && parseInt(this.dataset.id)+1==answers[parseInt(this.dataset.level)-1][parseInt(this.dataset.question)]) {
+    if (objectIntersectionArea(taskBlock, this) && parseInt(this.dataset.id) + 1 == answers[parseInt(this.dataset.level) - 1][parseInt(this.dataset.question)]) {
         this.remove();
         if (CURRENT_QUESTION_COUNTER < CURRENT_LEVEL_QUESTIONS_ORDER.length - 1) {
             CURRENT_QUESTION_COUNTER++;
@@ -180,7 +231,7 @@ let level23Validation =  function() {
         setDragListeners();
         this.remove();
     }
-}   
+}
 
 let level1Validation = function () {
     let correctAnswer = parseInt(this.dataset.id);
