@@ -1,7 +1,21 @@
-import { levelQuestions, questionSize } from "./answers.js";
+import { answers, levelQuestions, questionSize } from "./answers.js";
 
-let NICKNAME = localStorage.getItem('nickname') || 'Player';
+let NICKNAME = JSON.parse(localStorage.getItem('nickname')) || 'Player';
+let RECORDS = JSON.parse(localStorage.getItem('records')) || [[], [], []];
 let CURRENT_LEVEL_QUESTIONS_ORDER = [];
+let CURRENT_QUESTION_COUNTER = 0;
+let CURRENT_LEVEL_TIMER;
+let CURRENT_LEVEL_TIME = 0;
+
+let endGameScreen = document.querySelector('.endLevelScreen');
+let timeReport = document.querySelector('span.time');
+let gameScreen = document.querySelector('.gameContainer');
+let backToMenuButton = document.querySelector('.backToMenu');
+
+backToMenuButton.addEventListener('click', () => {
+    endGameScreen.classList.remove('active');
+    gameScreen.classList.remove('active');
+});
 
 let nicknameInput = document.querySelector('.nickname input');
 nicknameInput.addEventListener('input', function () {
@@ -9,45 +23,112 @@ nicknameInput.addEventListener('input', function () {
     console.log(NICKNAME);
 });
 
+function addBestPlayer(level, score) {
+    let bestPlayers = RECORDS[level];
+    let topPlayers = RECORDS[level].map((value) => value.nick);
+    if (topPlayers.includes(NICKNAME)) {
+        if (bestPlayers.filter((value) => value.nick == NICKNAME)[0].score > score) {
+            bestPlayers = bestPlayers.filter((value) => value.nick != NICKNAME)
+            bestPlayers.push({ 'nick': NICKNAME, 'score': score });
+        }
+    } else {
+        bestPlayers.push({ 'nick': NICKNAME, 'score': score });
+    }
+    bestPlayers = bestPlayers.sort((a, b) => {
+        return a.score > b.score;
+    });
+    bestPlayers = bestPlayers.slice(0, 5);
+    RECORDS[level] = bestPlayers;
+}
+
 let startGameButtons = document.querySelectorAll('.levels button');
 startGameButtons.forEach((item) => item.addEventListener('click', startLevel));
 
 let taskContainer = document.querySelector('.task');
 let answersContainer = document.querySelector('.answers');
 
+let levelP = document.querySelector('p.level');
+let questionP = document.querySelector('p.question');
+let timerP = document.querySelector('p.timer');
+
 function startLevel() {
-    level = parseInt(this.textContent) - 1;
-    createLevel1Task(level);
+    let level = parseInt(this.textContent) - 1;
+    createLevel(level);
+    gameScreen.classList.add('active');
+}
+
+function startTimer() {
+    CURRENT_LEVEL_TIME = 0;
+    CURRENT_LEVEL_TIMER = setInterval(() => {
+        CURRENT_LEVEL_TIME += 1;
+        timerP.textContent = formatTime(CURRENT_LEVEL_TIME);
+    }, 1000)
+}
+
+function formatTime(initial) {
+    let minutes = Math.floor(initial / 60);
+    let seconds = initial % 60;
+
+    minutes = minutes < 10 ? `0${minutes}` : minutes;
+    seconds = seconds < 10 ? `0${seconds}` : seconds;
+
+    return `${minutes}:${seconds}`
+
 }
 
 function createLevel(level) {
-    let CURRENT_QUESTION_SCORE = 0;
+    CURRENT_QUESTION_COUNTER = 0;
     CURRENT_LEVEL_QUESTIONS_ORDER = createRandomIndexesArray(levelQuestions[level]);
+    startTimer();
+    levelP.textContent = `Level ${level + 1}`;
+    createQuestion(level, CURRENT_LEVEL_QUESTIONS_ORDER[CURRENT_QUESTION_COUNTER]);
+}
+
+function createQuestion(level, question) {
     taskContainer.innerHTML = '';
     answersContainer.innerHTML = '';
 
-    if (level == 0) {
-        drawPictureItems(taskContainer, level, questionSize[level].options, CURRENT_LEVEL_QUESTIONS_ORDER[0]);
-        drawPictureItems(answersContainer, level, questionSize[level].answers, CURRENT_LEVEL_QUESTIONS_ORDER[0]);
-    }
+    questionP.textContent = `Question ${CURRENT_QUESTION_COUNTER + 1}/${levelQuestions[level]}`;
+
+    drawPictureItems(taskContainer, level, questionSize[level].options, question);
+    drawPictureItems(answersContainer, level, questionSize[level].answers, question);
 }
 
 function drawPictureItems(container, level, length, question) {
+    console.log(1);
+    let blank = false;
+    if (!(level == 0 || container == answersContainer)) {
+        container.style.background = `url('data/level${level + 1}/question${question + 1}/q.jpg')`;
+        container.style.backgroundSize = 'cover';
+        blank = true;
+    }
     let indexes = createRandomIndexesArray(length);
     for (let i = 0; i < indexes.length; i++) {
-        container.append(createPictureItem(level, question, indexes[i]));
+        container.append(createPictureItem(level, question, indexes[i], blank));
     }
-
+    if (!(level == 0 || container == answersContainer)) {
+        container.lastElementChild.dataset.id = answers[level - 1][question];
+    }
     setDragListeners();
 }
 
-function createPictureItem(level, question, id) {
+function createPictureItem(level, question, id, isBlank) {
+    let fileType = level==0 ? 'png' : 'jpg';
+    let adding = level==0 ? '' : 'a';
     let currentElement = document.createElement('img');
     currentElement.classList.add('option');
-    currentElement.src = `data/level${level + 1}/question${question + 1}/${id + 1}.png`;
+    if (isBlank) {
+        currentElement.classList.add('blank');
+        currentElement.src = 'data/blank.png';
+        currentElement.dataset.id = -1;
+    }
+    if (!isBlank) {
+        currentElement.src = `data/level${level + 1}/question${question + 1}/${adding}${id + 1}.${fileType}`;
+        currentElement.dataset.id = id;
+    }
     currentElement.dataset.question = question;
     currentElement.dataset.level = level;
-    currentElement.dataset.id = id;
+    
 
     return currentElement;
 }
@@ -70,18 +151,46 @@ function setDragListeners() {
 
             document.onmousemove = (e) => { moveAt(this, e); }
 
-            this.onmouseup = level1Validation;
+            this.onmouseup = this.dataset.level=='0' ? level1Validation : level23Validation;
         }
     });
 }
 
+let level23Validation =  function() {
+    let taskBlock = taskContainer.lastElementChild;
+    if (objectIntersectionArea(taskBlock, this) && parseInt(this.dataset.id)+1==answers[parseInt(this.dataset.level)-1][parseInt(this.dataset.question)]) {
+        this.remove();
+        if (CURRENT_QUESTION_COUNTER < CURRENT_LEVEL_QUESTIONS_ORDER.length - 1) {
+            CURRENT_QUESTION_COUNTER++;
+            createQuestion(parseInt(this.dataset.level), CURRENT_LEVEL_QUESTIONS_ORDER[CURRENT_QUESTION_COUNTER]);
+        } else {
+            clearInterval(CURRENT_LEVEL_TIMER);
+            addBestPlayer(parseInt(this.dataset.level), CURRENT_LEVEL_TIME);
+            showEndLevel();
+        }
+    } else {
+        answersContainer.append(createPictureItem(parseInt(this.dataset.level), parseInt(this.dataset.question), parseInt(this.dataset.id)));
+        setDragListeners();
+        this.remove();
+    }
+}   
+
 let level1Validation = function () {
-    let correctAnswer = this.dataset.id;
     let taskBlock = taskContainer.querySelector(`img[data-id="${correctAnswer}"]`);
 
     if (objectIntersectionArea(taskBlock, this)) {
         taskBlock.classList.add('done');
         this.remove();
+        if (Array.from(taskContainer.children).every((item) => item.classList.contains('done'))) {
+            if (CURRENT_QUESTION_COUNTER < CURRENT_LEVEL_QUESTIONS_ORDER.length - 1) {
+                CURRENT_QUESTION_COUNTER++;
+                createQuestion(parseInt(this.dataset.level), CURRENT_LEVEL_QUESTIONS_ORDER[CURRENT_QUESTION_COUNTER]);
+            } else {
+                clearInterval(CURRENT_LEVEL_TIMER);
+                addBestPlayer(parseInt(this.dataset.level), CURRENT_LEVEL_TIME);
+                showEndLevel();
+            }
+        }
     } else {
         answersContainer.append(createPictureItem(parseInt(this.dataset.level), parseInt(this.dataset.question), parseInt(this.dataset.id)));
         setDragListeners();
@@ -89,6 +198,11 @@ let level1Validation = function () {
     }
 
     document.onmousemove = null;
+}
+
+function showEndLevel() {
+    endGameScreen.classList.add('active');
+    timeReport.textContent = CURRENT_LEVEL_TIME;
 }
 
 function objectIntersectionArea(staticObj, dynamicObj) {
@@ -104,7 +218,7 @@ function objectIntersectionArea(staticObj, dynamicObj) {
 
     let staticSide = staticCoords.right - staticCoords.left;
 
-    return [rightLeft, bottomTop, leftRight, topBottom].every((measure) => measure>staticSide*0.5);
+    return [rightLeft, bottomTop, leftRight, topBottom].every((measure) => measure > staticSide * 0.5);
 }
 
 function moveAt(obj, ev) {
@@ -117,8 +231,6 @@ function createRandomIndexesArray(l) {
 }
 
 window.addEventListener('beforeunload', () => {
-    localStorage.setItem('nickname', NICKNAME);
+    localStorage.setItem('nickname', JSON.stringify(NICKNAME));
+    localStorage.setItem('records', JSON.stringify(RECORDS));
 });
-
-createLevel(0);
-setDragListeners();

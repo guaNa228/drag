@@ -32,19 +32,39 @@ main {
     overflow: hidden;
 }
 
-.game {
+.gameContainer {
     width: 100%;
     height: 100%;
     position: absolute;
     top: 0;
-    left: 0;
+    left: -100%;
     background-color: black;
+    transition: .5s;
+}
+
+.gameContainer.active {
+    left: 0;
+}
+
+.game {
+    margin-top: 40px;
+    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-around;
 }
 
+.gameData {
+    margin: 40px auto;
+    font-size: 40px;
+    color: white;
+    display: flex;
+    width: 50%;
+    justify-content: space-between;
+}
+
 .game .task {
+    background-size: cover;
     flex-basis: 30%;
     border: 4px solid #14ff53;
     display: grid;
@@ -53,6 +73,7 @@ main {
     grid-template-columns: repeat(3, 1fr);
     gap: 25px;
     padding: 25px;
+
 }
 
 .game .answers {
@@ -77,6 +98,48 @@ main {
     flex-direction: column;
     justify-content: center;
     align-items: center;
+}
+
+.endLevelScreen {
+    position: absolute;
+    top: -100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, .8);
+    transition: .5s;
+}
+
+.endLevelScreen.active {
+    top: 0;
+}
+
+.endLevelMenu {
+    background-color: black;
+    width: 40%;
+    padding: 30px;
+}
+
+.endLevelMenu h2 {
+    color: white;
+    text-align: center;
+}
+
+.endLevelMenu h2 span {
+    color: #14ff53;
+}
+
+.endLevelMenu .buttons {
+    display: flex;
+    justify-content: center;
+}
+
+.endLevelMenu .buttons button {
+    font-size: 30px;
 }
 
 .menu h1 {
@@ -143,9 +206,24 @@ button.rating:hover {
 
 .option {
     width: 100%;
+    height: 100%;
     background: #d5f7d6;
+}
+
+.option.blank {
+    background: transparent;
 }
 
 .option.done {
     background: #14ff53;
+}
+
+@keyframes fade {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
